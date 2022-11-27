@@ -1,6 +1,8 @@
-from PyQt5 import QtWidgets, uic, QtCore
+from PyQt5 import QtWidgets, QtCore
 import sys
 import sqlite3
+from main_ui import Ui_MainWindow
+from addEditCoffeeForm import Ui_Form
 
 
 # Так как Я должен сделать сам файл sql, то я не буду проверять есть файл sql или нет
@@ -72,8 +74,10 @@ class AddWord(QtWidgets.QDialog):
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
-        uic.loadUi('main.ui', self)
-        uic.loadUi('addEditCoffeeForm.ui', self)
+        self.main_wind = Ui_MainWindow()
+        self.main_wind.setupUi(self)
+        self.add_del = Ui_Form()
+        self.add_del.setupUi(self)
         self.con = sqlite3.connect('coffee.db')
         self.cur = self.con.cursor()
 
@@ -82,38 +86,38 @@ class MainWindow(QtWidgets.QMainWindow):
         self.title = self.cur.execute("""PRAGMA table_info(coffee)""").fetchall()
         self.title = list(i[1] for i in self.title)
 
-        self.DelBtn.setEnabled(False)
+        self.add_del.DelBtn.setEnabled(False)
 
-        self.tableWidget.itemSelectionChanged.connect(self.selected_item_in_table)
-        self.AddBtn.clicked.connect(self.add_word)
-        self.DelBtn.clicked.connect(self.del_button)
-        self.tableWidget.cellChanged.connect(self.change_item_in_table)
+        self.main_wind.tableWidget.itemSelectionChanged.connect(self.selected_item_in_table)
+        self.add_del.AddBtn.clicked.connect(self.add_word)
+        self.add_del.DelBtn.clicked.connect(self.del_button)
+        self.main_wind.tableWidget.cellChanged.connect(self.change_item_in_table)
 
         self.loadsql()
 
     def loadsql(self):
         self.list_items = self.cur.execute("""SELECT * FROM coffee""").fetchall()
-        self.tableWidget.setColumnCount(len(self.title))
-        self.tableWidget.setHorizontalHeaderLabels(self.title)
-        self.tableWidget.setRowCount(0)
+        self.main_wind.tableWidget.setColumnCount(len(self.title))
+        self.main_wind.tableWidget.setHorizontalHeaderLabels(self.title)
+        self.main_wind.tableWidget.setRowCount(0)
         for i, row in enumerate(self.list_items):
-            self.tableWidget.setRowCount(
-                self.tableWidget.rowCount() + 1)
+            self.main_wind.tableWidget.setRowCount(
+                self.main_wind.tableWidget.rowCount() + 1)
             for j, elem in enumerate(row):
-                self.tableWidget.setItem(
+                self.main_wind.tableWidget.setItem(
                     i, j, QtWidgets.QTableWidgetItem(str(elem)))
 
-        self.tableWidget.resizeColumnsToContents()
-        for i in range(self.tableWidget.columnCount()):
-            self.tableWidget.horizontalHeader().setSectionResizeMode(i, QtWidgets.QHeaderView.Stretch)
+        self.main_wind.tableWidget.resizeColumnsToContents()
+        for i in range(self.main_wind.tableWidget.columnCount()):
+            self.main_wind.tableWidget.horizontalHeader().setSectionResizeMode(i, QtWidgets.QHeaderView.Stretch)
 
     def selected_item_in_table(self):
         """Метод для del_pushbutton"""
         # Если не выбрано слово, то незачем много раз тыкать на кнопку 'Удалить'
-        if self.tableWidget.selectedItems():
-            self.DelBtn.setEnabled(True)
+        if self.main_wind.tableWidget.selectedItems():
+            self.add_del.DelBtn.setEnabled(True)
         else:
-            self.DelBtn.setEnabled(False)
+            self.add_del.DelBtn.setEnabled(False)
 
     def add_word(self):
         """Метод добавления слова"""
@@ -131,8 +135,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.loadsql()
 
     def del_button(self):
-        rows = list(set([i.row() for i in self.tableWidget.selectedItems()]))
-        ids = [self.tableWidget.item(i, 0).text() for i in rows]
+        rows = list(set([i.row() for i in self.main_wind.tableWidget.selectedItems()]))
+        ids = [self.main_wind.tableWidget.item(i, 0).text() for i in rows]
         valid = QtWidgets.QMessageBox.question(
             self, '', "Действительно удалить элементы с id " + ",".join(ids),
             QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
@@ -145,21 +149,21 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def change_item_in_table(self):
         """Метод изменения слова внутри tablewidget"""
-        if self.tableWidget.currentColumn() != 0:
-            for i in self.tableWidget.selectedItems():
-                row = self.tableWidget.currentRow() + 1
-                col = self.tableWidget.currentColumn()
+        if self.main_wind.tableWidget.currentColumn() != 0:
+            for i in self.main_wind.tableWidget.selectedItems():
+                row = self.main_wind.tableWidget.currentRow() + 1
+                col = self.main_wind.tableWidget.currentColumn()
                 title = self.title[col]
                 sqlite_insert_query = \
                     f"""UPDATE coffee
                         set '{title}' = ?
                         where id = {row}
                         """
-                data = (self.tableWidget.item(row - 1, col).text(),)
+                data = (self.main_wind.tableWidget.item(row - 1, col).text(),)
                 count = self.cur.execute(sqlite_insert_query, data)
                 self.con.commit()
 
-        if self.tableWidget.selectedItems():  # Если не выбрано, то ничего не делаем
+        if self.main_wind.tableWidget.selectedItems():  # Если не выбрано, то ничего не делаем
             self.list_items = self.cur.execute("""SELECT * FROM coffee""").fetchall()
             self.loadsql()
 
